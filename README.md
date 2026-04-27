@@ -1,43 +1,90 @@
 # libskills-protocol
 
-**MCP and HTTP protocol definitions for the LibSkills ecosystem.**
+**MCP (Model Context Protocol) server for the LibSkills ecosystem.**
 
 Part of the [LibSkills](https://github.com/LibSkills) ecosystem — the Behavioral Knowledge Layer for open-source libraries.
 
 ## Status
 
-📅 **Phase 10 on the roadmap.** Not yet implemented. Reserved for future use when multiple clients exist.
+✅ **Implemented** — MCP server with 4 tools, communicating via stdin/stdout JSON-RPC 2.0.
 
-## MCP (Model Context Protocol)
+## MCP Tools
 
-When `libskills serve` is running, AI agents and IDEs can query skills via MCP:
+| Tool | Description |
+|------|-------------|
+| `get_skill` | Get complete skill (all knowledge files) by key |
+| `search_skills` | Keyword search (name, tags, summary) |
+| `find_skills` | Semantic search across skill file contents |
+| `get_section` | Get a specific knowledge section (e.g., pitfalls.md) |
 
-```
-Tool: get_skill
-Input: { "path": "cpp/gabime/spdlog" }
-Output: { skill metadata + file list }
-```
+## Usage
 
-## HTTP API (Future)
+### Build
 
-```
-GET  /v1/skills                                       # List all skills
-GET  /v1/skills/{language}/{author}/{name}             # Get full skill
-GET  /v1/skills/{language}/{author}/{name}/{section}   # Get specific section
-GET  /v1/search?q={keyword}                           # Search
-GET  /v1/find?q={intent}                              # Semantic search
-POST /v1/skills                                       # Submit Tier 2 skill
-GET  /health                                          # Health check
+```bash
+cd libskills-protocol
+cargo build --release
 ```
 
-## Constraints
+### AI IDE Configuration
 
-Before this repository is active, the project must:
-- Have proven that skills reduce AI errors (Phase 4)
-- Have meaningful community adoption (Phase 5-6)
-- Have multiple clients that would benefit from a server
+Add to your AI IDE's MCP configuration (e.g., Claude Desktop, Cursor):
 
-See [libskills-docs/ROADMAP.md](https://github.com/LibSkills/libskills-docs/blob/main/ROADMAP.md) for the full phased plan.
+```json
+{
+  "mcpServers": {
+    "libskills": {
+      "command": "/path/to/libskills-protocol/target/release/libskills-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+### Manual Test
+
+```bash
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' | ./target/release/libskills-mcp
+
+echo '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | ./target/release/libskills-mcp
+
+echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_skill","arguments":{"path":"cpp/gabime/spdlog"}}}' | ./target/release/libskills-mcp
+```
+
+### Integration Flow
+
+```
+User: "Write C++ logging code"
+  → AI detects spdlog
+  → AI calls MCP tool get_skill(cpp/gabime/spdlog)
+  → AI reads pitfalls.md and safety.md
+  → AI generates correct code with no hallucinations
+```
+
+## Architecture
+
+```
+AI IDE (Claude/Cursor)
+  │
+  │ MCP JSON-RPC via stdio
+  ▼
+libskills-mcp ─── reads from ─── libskills-registry/skills/
+  │
+  ├── get_skill        → full skill with all files
+  ├── search_skills    → keyword match on index
+  ├── find_skills      → content-based TF-IDF
+  └── get_section      → single knowledge file
+```
+
+## Requirements
+
+- The `libskills-registry` repo must be in a sibling directory, OR
+- Skills must be cached at `~/.libskills/cache/`
+
+## Related
+
+- [libskills-cli](https://github.com/LibSkills/libskills-cli) — Full CLI with HTTP API server
+- [HTTP API Reference](https://github.com/LibSkills/libskills-docs/blob/main/reference/api.md)
 
 ## License
 
