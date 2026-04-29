@@ -434,7 +434,7 @@ fn collect_and_score(
         if let Ok(entries) = fs::read_dir(dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.is_file() && path.extension().map_or(false, |e| e == "md") {
+                if path.is_file() && path.extension().is_some_and(|e| e == "md") {
                     if let Ok(content) = fs::read_to_string(&path) {
                         let doc_tokens: std::collections::HashSet<String> =
                             tokenize(&content).into_iter().collect();
@@ -445,12 +445,12 @@ fn collect_and_score(
                         }
                     }
                 }
-                if path.is_dir() && path.file_name().map_or(false, |n| n == "examples") {
+                if path.is_dir() && path.file_name().is_some_and(|n| n == "examples") {
                     // Count example files as bonus
                     if let Ok(examples) = fs::read_dir(&path) {
                         let count = examples
                             .flatten()
-                            .filter(|e| e.file_type().map_or(false, |t| t.is_file()))
+                            .filter(|e| e.file_type().is_ok_and(|t| t.is_file()))
                             .count();
                         score += count as f64 * 0.1;
                     }
@@ -465,7 +465,7 @@ fn collect_and_score(
 
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
-            if entry.file_type().map_or(false, |t| t.is_dir()) {
+            if entry.file_type().is_ok_and(|t| t.is_dir()) {
                 let name = entry.file_name().to_string_lossy().to_string();
                 let new_prefix = if prefix.is_empty() {
                     name.clone()
