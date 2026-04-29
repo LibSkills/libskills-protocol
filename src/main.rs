@@ -243,13 +243,16 @@ fn search_skills_tool(args: &Value, state: &AppState) -> Result<String, String> 
                 .map(|a| a.iter().filter_map(|t| t.as_str().map(|s| s.to_lowercase())).collect())
                 .unwrap_or_default();
             let summary = skill["summary"].as_str().unwrap_or("").to_lowercase();
+            let lang = skill["language"].as_str().unwrap_or("").to_lowercase();
+            let key = skill["key"].as_str().unwrap_or("").to_lowercase();
 
             let mut score = 0u32;
             if name == query { score += 100; }
             if name.contains(&query) { score += 50; }
+            if lang.contains(&query) { score += 60; }
             if tags.iter().any(|t| t.contains(&query)) { score += 30; }
             if summary.contains(&query) { score += 20; }
-            if skill["key"].as_str().map_or(false, |k| k.to_lowercase().contains(&query)) { score += 10; }
+            if key.contains(&query) { score += 10; }
 
             if score > 0 {
                 results.push((skill["key"].as_str().unwrap_or("?").to_string(), score));
