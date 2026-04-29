@@ -310,7 +310,7 @@ fn search_skills_tool(args: &Value, state: &AppState) -> Result<String, String> 
         }
     }
 
-    results.sort_by(|a, b| b.1.cmp(&a.1));
+    results.sort_by_key(|b| std::cmp::Reverse(b.1));
     results.truncate(limit);
 
     if results.is_empty() {
